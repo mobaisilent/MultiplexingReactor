@@ -264,3 +264,48 @@ public class Handler implements Runnable{
 ![Screenshot_2024-10-16-20-16-32-562_com.orion.notein-edit](images/Screenshot_2024-10-16-20-16-32-562_com.orion.notein-edit.jpg)
 
 > 大体思路是这样的，注意Reactor中的dispatch这个方法的实现
+<<<<<<< HEAD
+=======
+
+上面是单个线程的实现方式，多线程实现如下；修改Handler.java即可
+
+```java
+package org.mobai.reactor;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class Handler implements Runnable{
+  private static final ExecutorService POOL = Executors.newFixedThreadPool(10);
+  private final SocketChannel channel;
+  public Handler(SocketChannel channel) {
+    this.channel = channel;
+  }
+
+  @Override
+  public void run() {
+    try {
+      ByteBuffer buffer = ByteBuffer.allocate(1024);
+      channel.read(buffer);
+      buffer.flip();
+      POOL.submit(() -> {
+        try {
+          System.out.println("接收到客户端数据："+new String(buffer.array(), 0, buffer.remaining()));
+          channel.write(ByteBuffer.wrap("已收到！".getBytes()));
+        }catch (IOException e){
+          e.printStackTrace();
+        }
+      });
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+}
+```
+
+> 改动不大，就是用线程池的方式来处理SocketChannel的read和write
+
+后面关于创建Reactor线程池子即SubReactor的方式见原文档，这里不做具体展开。
